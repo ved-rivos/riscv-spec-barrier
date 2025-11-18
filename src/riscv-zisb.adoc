@@ -1,4 +1,4 @@
-= RISC-V Example Specification Document (Zexmpl)
+= RISC-V Speculation Barrier Instructions (Zisb)
 include::../docs-resources/global-config.adoc[]
 :docgroup: RISC-V Task Group
 :description: RISC-V Speculation Barrier Instructions (Zisb)
