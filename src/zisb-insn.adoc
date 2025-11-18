@@ -1,4 +1,4 @@
-=== Speculation Barrier Instructions
+== Speculation Barrier Instructions
 
 The Zisb extension provides three barrier instructions to control transient
 execution:
@@ -38,21 +38,22 @@ following code snippet.
  3.  uint8_t *array2, uint32_t len2) {
  4. if (x < len1)) {
  5.     bgeu    a0, a2, L3
- 6. // If the branch at line 5 mispredicts then the load at line 14
- 7. // may use an out-of-bound index into array1 and disclose its
- 8. // contents using a side channel caused by the load at line 18
- 9. // The TEB at line 11 prevents execution of the loads at line 14
-10. // and 18 until the branch resolves.
-11.     teb
-12.     y = array2[array1[x] * 4096];
-13.       add    a5, a0, a1
-14.       lbu    a5, 0(a1)
-15.       sext.w a5, a5
-16.       sllw   a5, a5,0xc
-17.       add    a5, a5, a3
-18.       lbu    a5,0(a5)
-19. }
-20. L3:
+ 6. // If the branch at line 5 mispredicts then the load at
+ 7. // line 15 may use an out-of-bound index into array1 and
+ 8. // disclose its contents using a side channel caused by
+ 9. // the load at line 19. The TEB at line 12 prevents
+10. // execution of the loads at line 15 and 19 until the
+11. // branch resolves.
+12.     teb
+13.     y = array2[array1[x] * 4096];
+14.       add    a5, a0, a1
+15.       lbu    a5, 0(a1)
+16.       sext.w a5, a5
+17.       sllw   a5, a5,0xc
+18.       add    a5, a5, a3
+19.       lbu    a5,0(a5)
+20. }
+21. L3:
 
 ====
 
@@ -112,18 +113,18 @@ data-dependency speculation, as illustrated by the following code snippet.
 14.       la   a0, mode
 15.       la   ra, get_handler
 16.       jalr ra
-17. // The address of the handler provided by get_handler is stored
-18. // in the variable `mh` by the store at line 19.
+17. // The address of the handler is stored in the
+18. // variable `mh` by the store at line 19.
 19.       sd   a0, 0(sp)
 20.   mh(data, len);
-21. // If the load at line 32 bypasses the store at line 19, then it
+21. // If the load at line 32 bypasses the store at line 19, it
 22. // may read the old contents of the stack and provide that as
-23. // the jump target to JALR at line 33. The old contents may be
+23. // the target to JALR at line 33. The old contents may be
 24. // controlled by untrusted entities and allow speculative
-25. // execution of a disclosure gadget that could leak information
-26. // through a side channel. The MDB at line 29 ensures that the
-27. // LD at line 32 cannot bypass SD at line 19 thereby ensuring
-28. // that it gets the data stored by that SD.
+25. // execution of a disclosure gadget that could leak
+26. // information through a side channel. The MDB at line 29
+27. // ensures that the LD at line 32 cannot bypass SD at line 19
+28. // thereby ensuring that it gets the data stored by that SD.
 29.       mdb
 30.       ld   a0, 16(sp)
 31.       ld   a1,  8(sp)
@@ -136,7 +137,7 @@ data-dependency speculation, as illustrated by the following code snippet.
 
 ====
 
-==== DPB - Data-value Prediction Barrier
+=== DPB - Data-value Prediction Barrier
 
 The DPB instruction has the following barrier semantics:
 
@@ -159,25 +160,26 @@ speculation, as illustrated by the following code snippet.
 [listing]
  1. uint32_t cur_priv;
  2. uint8_t data_value_prediction_example(uint32_t index,
- 3.                   uint8_t *priv_array, uint8_t *unpriv_array) {
+ 3.                 uint8_t *priv_array, uint8_t *unpriv_array) {
  4.   uint8_t *array;
  5.   array = (cur_priv == 0) ? priv_array : unpriv_array;
  6.       la         t0, cur_priv
  7.       lw         t0, 0(t0)
  8.       la         a1, priv_array
  9.       la         a2, unpriv_array
-10.   // If the data value of cur_priv was predicted by the load at line 7
-11.   // and the prediction was incorrect, then data may be loaded from the
-12.   // wrong array speculatively by the load at line 21. The DPB at line
-13.   // 15 ensures that the load at line 21 will not execute speculatively
-14.   // using a predicted data value.
-15.       dpb
-16.       czero.eqz  a2, a2, t0
-17.       czero.nez  a1, a1, t0
-18.       or         t0, a1, a2
-19.   return array[index];
-20.       add        t0, t0, a0
-21.       lbu        a0, 0(t0)
-22. }
+10.   // If the data value of cur_priv was predicted by the load
+11.   // at line 7 and the prediction was incorrect, then data may
+12.   // be loaded from the wrong array speculatively by the load
+13.   // at line 22. The DPB at line 16 ensures that the load at
+14.   // line 22 will not execute speculatively using a predicted
+15.   // data value.
+16.       dpb
+17.       czero.eqz  a2, a2, t0
+18.       czero.nez  a1, a1, t0
+19.       or         t0, a1, a2
+20.   return array[index];
+21.       add        t0, t0, a0
+22.       lbu        a0, 0(t0)
+23. }
 
 ====
