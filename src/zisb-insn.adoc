@@ -1,4 +1,4 @@
-== Spculation Barrier Instructions
+== Speculation Barrier Instructions
 
 The Zisb extension provides three barrier instructions to control speculation
 that could lead to in-domain attacks. Using these barrier instructions allows
