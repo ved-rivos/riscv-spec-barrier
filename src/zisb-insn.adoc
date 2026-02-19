@@ -1,64 +1,10 @@
-== "Zihpd" - Hardware Protection Domains, Version 0.1
-
-Zihpd defines a hardware protection domain that consists of code and data
-within a protection boundary defined by hardware-enforced access control
-mechanisms. A hardware protection domain is identified by the combination
-of the following identifiers:
-
-* The current privilege level.
-
-* The address space identifier (`satp.ASID`) when supervisor mode is also
-  implemented, the current privilege level is S or U, and the `satp.MODE` is not
-   `Bare`.
-
-* When the H or Shbare extension is also implemented:
-
-  ** The current virtualization mode (`V`).
-  ** The current virtual machine identifier (`hgatp.VMID`), when `hgatp.MODE` is
-     not `Bare` and `V=1`.
-  ** The address space identifier (`satp.ASID`), when the current privilege
-     level is HS and `satp.MODE` is not `Bare`.
-  ** The address space identifier (`vsatp.ASID`), when the current privilege
-     level is VS or VU and `vsatp.MODE` is not `Bare`.
-
-
-* When the Smsdid extension is also implemented:
-  ** The current supervisor domain identifier (SDID).
-
-When the Zihpd extension is implemented, predictions learned in one hardware
-protection domain cannot be used to predict outcomes in another hardware
-protection domain.
-
-When an identifier used to identify a hardware protection domain is reused,
-software must execute `fence.time` to ensure that predictions created by code
-that previously executed in that hardware protection domain do not affect
-outcomes for code that subsequently executes in that hardware protection
-domain.
-
-[NOTE]
-====
-When Zihpd is implemented, the predictors for control-flow, data-dependency, and
-data-value prediction may be tagged with the identifiers of the hardware
-protection domain in which they were learned to prevent their use in predicting
-outcomes in a different hardware protection domain. Alternatively, the
-implementation may invalidate or clear predictions when the hardware protection
-domain changes. A combination of these two techniques may also be employed,
-wherein some types of predictors use tagging and others use invalidation as a
-defense.
-
-Executing `fence.time` may incur substantial overhead. When Zihpd is implemented,
-`fence.time` is required only when an identifier is reused. If an implementation
-provides a sufficiently large identifier space, reuse is infrequent, which
-mitigates the cost of invoking the fence.
-====
-
-== "Zisb" - Speculation Barrier Instructions, Version 0.1
+== Spculation Barrier Instructions
 
 The Zisb extension provides three barrier instructions to control speculation
 that could lead to in-domain attacks. Using these barrier instructions allows
 explicit control of speculation boundaries to ensure that transient execution
 --arising from control-flow, data-value, or data-dependency speculation--does
-not expose data through side channels.
+not expose data through cache-based side channels.
 
 * TEB (Transient Execution Barrier): mitigates transient execution due
   to control-flow prediction.
@@ -74,13 +20,13 @@ The TEB instruction has the following barrier semantics:
 * The TEB instruction cannot be speculatively executed due to control-flow
   speculation by instructions that appear in program order before TEB.
 * Execution of instructions that follow TEB in program order cannot be observed
-  through covert channels until TEB completes.
+  through cache-based side channels until TEB completes.
 
 [NOTE]
 ====
 These semantics allow execution of instructions that follow TEB, provided their
 execution does not cause revelation of the data used by those instructions
-through a covert channel.
+through a cache-based side channel.
 
 Processors may speculate the control flow of a program by predicting the
 outcome of a branch using data structures such as a pattern history table
@@ -88,10 +34,10 @@ outcome of a branch using data structures such as a pattern history table
 If a misprediction is detected, the speculatively executed instructions are
 discarded, the architectural state is recovered, and control flow continues
 along the correct path. Speculative execution that occurs before the branch
-outcome is verified may be used to leak data through side channels. The TEB
-may be used to control such control-flow speculation, as illustrated by the
+outcome is verified may be used to leak data through cache-based side channels.
+The TEB may be used to control such control-flow speculation, as illustrated by the
 following code snippet. This example assumes that the shared data cache can
-be exploited as a covert channel, allowing an attacker to infer sensitive
+be exploited as a side channel, allowing an attacker to infer sensitive
 information by observing cache access patterns resulting from speculative
 execution.
 
@@ -156,7 +102,7 @@ dependency, the load obtains its data from the data cache or memory.
 Eventually, the prediction is verified. If an actual conflict is detected,
 the load and all succeeding instructions are re-executed. The speculative
 store bypass that occurs when the prediction is wrong may be exploited to
-leak data using side channels. The MDB may be used to control such
+leak data using cache-based side channels. The MDB may be used to control such
 data-dependency speculation, as illustrated by the following code snippet.
 
 [listing]
@@ -185,7 +131,7 @@ data-dependency speculation, as illustrated by the following code snippet.
 23. // the target to JALR at line 33. The old contents may be
 24. // controlled by untrusted entities and allow speculative
 25. // execution of a disclosure gadget that could leak
-26. // information through a side channel. The MDB at line 29
+26. // information through a cache-based side channel. The MDB at line 29
 27. // ensures that the LD at line 32 cannot bypass SD at line 19
 28. // thereby ensuring that it gets the data stored by that SD.
 29.       mdb
@@ -207,7 +153,7 @@ The DPB instruction has the following barrier semantics:
 * Instructions that appear in program order after a DPB must not execute with
   operand values that are the result of data-value speculation by instructions
   in program order before the DPB, until the DPB completes, if such execution
-  could be observed through covert channels.
+  could be observed through cache-based side channels.
 
 [NOTE]
 ====
@@ -217,8 +163,8 @@ speculatively, can be influenced by attackers to access out-of-bounds or
 unauthorized memory. Eventually, the prediction is verified. If a
 misprediction is detected, all succeeding instructions are re-executed. When
 the prediction is wrong, the transient execution may be exploited to leak
-data using covert channels. The DPB may be used to control such data-value
-speculation, as illustrated by the following code snippet.
+data using cache-based side channels. The DPB may be used to control such
+data-value speculation, as illustrated by the following code snippet.
 
 [listing]
  1. uint32_t cur_priv;
